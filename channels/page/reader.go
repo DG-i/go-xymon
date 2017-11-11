@@ -114,7 +114,7 @@ func (r *Reader) ParseMessage(msg []string) {
 				}
 				message.Type = "ack"
 			} else {
-				r.errorChan <- errors.New("Unknown message type")
+				r.errorChan <- errors.New("Unknown message type. Raw header: " + line)
 				return
 			}
 
