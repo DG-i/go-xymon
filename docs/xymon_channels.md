@@ -110,17 +110,48 @@ This channel is fed the contents of all incoming "status" messages.
 ### Stachg channel
 This channel is fed information about tests that change status, i.e. the color of the status-log changes.
 #### Header example
+```
+@@stachg#65528/foo.domain.com|1515014144.794147|1.1.1.1||foo.domain.com|userconn|1515015944|green|clear|1515013544|0||0|1515013849|
+@@stachg#65531/bar.domain.com|1515014177.221703|2.2.2.2||bar.domain.com|wmi-cpustatus|1515015977|green|red|1515013917|0||0|1506115789|
+```
 #### Header fields
+| field | value                      |
+|-------|----------------------------|
+| 0     | channel marker with sender |
+| 1     | microsecond timestamp      |
+| 2     | sender IP                  |
+| 3     | origin / empty             |
+| 4     | sender hostname            |
+| 5     | testname                   |
+| 6     | test expiration            |
+| 7     | check color                |
+| 8     | old check color            |
+| 9     | last change timestamp      |
+| 10    | disable expiration         |
+| 11    | disable message            |
+| 12    | downtime active            |
+| 13    | client message timestamp   |
+| 14    | modifiers                  |
 
 ### Data channel
 This channel is fed information about all "data" messages.
 #### Header example
+```
+@@data#724321/foo.domain.com|1515013866.205199|1.1.1.1||foo.domain.com|trends||examples
+@@data#724322/bar.domain.com|1515013866.246946|2.2.2.2||bar.domain.com|trends|linux|examples
+@@data#725141/baz.domain.com|1515013931.200665|3.3.3.3||baz.domain.com|netstat|linux|examples
+```
 #### Header fields
-
-### Notes channel
-This channel is fed information about all "notes" messages.
-#### Header example
-#### Header fields
+| field | value                      |
+|-------|----------------------------|
+| 0     | channel marker with sender |
+| 1     | microsecond timestamp      |
+| 2     | sender IP                  |
+| 3     | origin / empty             |
+| 4     | sender hostname            |
+| 5     | testname                   |
+| 6     | class                      |
+| 7     | page path                  |
 
 ### Enadis channel
 This channel is fed information about hosts or tests that are being disabled or enabled. "expiretime" is 0 for an "enable" message, >0 for a "disable" message.
@@ -141,14 +172,7 @@ This channel is fed information about hosts or tests that are being disabled or 
 | 5     | expire time                |
 | 6     | disable message            |
 
-### Client channel
-This channel is fed the contents of the client messages sent by Xymon clients installed on the monitored servers.
-#### Header example
-#### Header fields
-
-### Clichg channel
-This channel is fed the contents of a host client messages, whenever a status for that host goes red, yellow or purple.
-#### Header example
-#### Header fields
+### Notes channel
+This channel is fed information about all "notes" messages.
 
 [1]: https://sourceforge.net/p/xymon/code/HEAD/tree/trunk/xymond/xymond.c
