@@ -3,7 +3,7 @@ go-xymon
 
 A Xymon library for receiving Xymon messages and sending check results.
 
-At the moment there's only a reader for the Xymon page channel.
+At the moment there's only a reader for the `xymond_channel` tool. The reader processes all known message types and works with every channel.
 
 ```go
 package main
@@ -11,14 +11,19 @@ package main
 import (
 	"fmt"
 
-	pageChannel "github.com/dg-i/go-xymon/channels/page"
+	"github.com/DG-i/go-xymon/channels"
 )
 
-func handleMessage(msg pageChannel.Message, errorChan chan<- error) { fmt.Printf("%+v", msg) }
-func handleError(err error)                                         { fmt.Printf("%+v", err) }
+type Handler struct{}
+
+func (h *Handler) MessageHandler(msg channels.Message) error {
+	fmt.Printf("%+v", msg)
+	return nil
+}
+func (h *Handler) ErrorHandler(err error) { fmt.Printf("%+v", err) }
 
 func main() {
-	channelReader := pageChannel.NewReader(handleMessage, handleError, log)
+	channelReader := channels.NewReader(&Handler{})
 	channelReader.Run()
 }
 ```
