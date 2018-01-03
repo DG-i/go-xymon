@@ -1,13 +1,11 @@
-package pageChannel
+package channels
 
 import (
 	"bufio"
 	"errors"
-	"fmt"
 	"log"
 	"net"
 	"os"
-	"strconv"
 	"strings"
 	"time"
 
@@ -26,6 +24,40 @@ const (
 
 	stdinBufferStartCapacity = 32 * 1024
 	stdinBufferMaxCapacity   = 2048 * 1024
+)
+
+// Possible message types
+const (
+	// all channels
+	TypeDropHost   = "drophost"
+	TypeDropState  = "dropstate"
+	TypeDropTest   = "droptest"
+	TypeRenameHost = "renamehost"
+	TypeRenameTest = "renametest"
+	TypeReload     = "reload"
+	TypeShutdown   = "shutdown"
+	TypeLogrotate  = "logrotate"
+	TypeIdle       = "idle"
+
+	// enadis channel
+	TypeEnaDis = "enadis"
+
+	// data channel
+	TypeData = "data"
+
+	// notes channel
+	TypeNotes = "notes"
+
+	// page channel
+	TypeAck    = "ack"
+	TypeNotify = "notify"
+	TypePage   = "page"
+
+	// stachg channel
+	TypeStaChg = "stachg"
+
+	// status channel
+	TypeStatus = "status"
 )
 
 // MessageHandler is called for every parsed message on the message channel
@@ -60,22 +92,6 @@ type Message struct {
 	Body        []string
 }
 
-func parseTimestamp(timestamp string) (time.Time, error) {
-	fields := strings.Split(timestamp, ".")
-	if len(fields) != 2 {
-		return time.Time{}, errors.New("Malformed timestamp")
-	}
-	seconds, err := strconv.ParseInt(fields[0], 10, 64)
-	if err != nil {
-		return time.Time{}, err
-	}
-	useconds, err := strconv.ParseInt(fields[1], 10, 64)
-	if err != nil {
-		return time.Time{}, err
-	}
-	return time.Unix(seconds, useconds), nil
-}
-
 // ParseMessage parses a message into the Message type
 func (r *Reader) ParseMessage(msg []string) {
 
@@ -89,46 +105,26 @@ func (r *Reader) ParseMessage(msg []string) {
 		// If the line starts with "@@", it's the header. Parse it and fill in the metadata fields.
 		// Otherwise append the line to the message body
 		if strings.HasPrefix(line, "@@") {
-
 			fields := strings.Split(line, "|")
-			if strings.HasPrefix(line, "@@page") {
-				if len(fields) != 16 {
-					r.errorChan <- fmt.Errorf("Malformed message header: %+v", line)
-					return
-				}
-				message.Type = "page"
-				message.LastChange, err = parseTimestamp(fmt.Sprintf("%s.0", fields[9]))
-				if err != nil {
-					r.errorChan <- err
-					return
-				}
-				message.Color = fields[7]
-				message.OldColor = fields[8]
-				message.Page = fields[10]
-				message.OSName = fields[12]
-				message.ClassName = fields[13]
-			} else if strings.HasPrefix(line, "@@ack") {
-				if len(fields) != 7 {
-					r.errorChan <- errors.New("Malformed message header")
-					return
-				}
-				message.Type = "ack"
-			} else {
-				r.errorChan <- errors.New("Unknown message type. Raw header: " + line)
-				return
+			// Header should look like @@page#472566/foo.example.com|...
+			msgType := strings.Trim(strings.Split(fields[0], "#")[0], "@")
+
+			switch msgType {
+			case TypePage:
+				message, err = parsePageHeader(fields)
+			case TypeAck:
+				message, err = parseAckHeader(fields)
+
+			case TypeReload, TypeShutdown, TypeLogrotate, TypeIdle:
+				// Ignore these messages
+			default:
+				err = errors.New("Unknown message type. Raw header: " + line)
 			}
 
-			message.Timestamp, err = parseTimestamp(fields[1])
 			if err != nil {
 				r.errorChan <- err
 				return
 			}
-
-			message.Sender = net.ParseIP(fields[2])
-			message.Hostname = fields[3]
-			message.Test = fields[4]
-			message.HostAddress = net.ParseIP(fields[5])
-			// field 6 is discarded in favor of the timestamp in 1
 
 		} else {
 			message.Body = append(message.Body, line)
@@ -195,6 +191,9 @@ func (r *Reader) bufferDispatcher() {
 			go r.ParseMessage(currentMessage)
 		}
 
+		// We're not breaking the loop above, so the last "@@" line will be appended to
+		// currentMessage. This doesn't matter as currentMessage will be reset on the next
+		// iteration.
 		currentMessage = append(currentMessage, line)
 	}
 }
