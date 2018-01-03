@@ -59,19 +59,20 @@ const (
 	TypeStatus = "status"
 )
 
-// MessageHandler is called for every parsed message on the message channel
-type MessageHandler func(msg Message) error
-
-// ErrorHandler is called for every error on the error channel
-type ErrorHandler func(err error)
+// Handlers defines the interface for message handlers
+type Handlers interface {
+	// MessageHandler is called for every parsed message on the message channel
+	MessageHandler(msg Message) error
+	// ErrorHandler is called for every error on the error channel
+	ErrorHandler(err error)
+}
 
 // Reader holds runtime config and information about the reader instance
 type Reader struct {
 	messageChan     chan Message
 	errorChan       chan error
 	inputBufferChan chan string
-	MessageHandler  MessageHandler
-	ErrorHandler    ErrorHandler
+	handlers        Handlers
 }
 
 // ParseMessage parses a message into the Message type
@@ -162,7 +163,7 @@ func (r *Reader) ParseMessage(msg []string) {
 
 func (r *Reader) messageWorker() {
 	for msg := range r.messageChan {
-		err := r.MessageHandler(msg)
+		err := r.handlers.MessageHandler(msg)
 		if err != nil {
 			r.errorChan <- err
 		}
@@ -171,7 +172,7 @@ func (r *Reader) messageWorker() {
 
 func (r *Reader) errorWorker() {
 	for msg := range r.errorChan {
-		r.ErrorHandler(msg)
+		r.handlers.ErrorHandler(msg)
 	}
 }
 
@@ -248,13 +249,12 @@ func (r *Reader) queueMonitor() {
 // NewReader sets up a channel reader which reads mesages from STDIN, parses them and dispatches them to the handler functions.
 // Every parsed message will be fed to the MessageHandler.
 // Every error will be fed to the ErrorHandler.
-func NewReader(messageHandler MessageHandler, errorHandler ErrorHandler) *Reader {
+func NewReader(handlers Handlers) *Reader {
 	reader := Reader{
 		inputBufferChan: make(chan string, inputBufferSize),
 		messageChan:     make(chan Message, messageBufferSize),
 		errorChan:       make(chan error, errorBufferSize),
-		MessageHandler:  messageHandler,
-		ErrorHandler:    errorHandler,
+		handlers:        handlers,
 	}
 
 	go reader.queueMonitor()
