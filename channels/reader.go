@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"errors"
 	"log"
-	"net"
 	"os"
 	"strings"
 	"time"
@@ -75,23 +74,6 @@ type Reader struct {
 	ErrorHandler    ErrorHandler
 }
 
-// Message a contains the content and metadata of a channel message
-type Message struct {
-	Type        string
-	Timestamp   time.Time
-	Test        string
-	Sender      net.IP
-	Hostname    string
-	HostAddress net.IP
-	Color       string
-	OldColor    string
-	LastChange  time.Time
-	Page        string
-	OSName      string
-	ClassName   string
-	Body        []string
-}
-
 // ParseMessage parses a message into the Message type
 func (r *Reader) ParseMessage(msg []string) {
 
@@ -110,13 +92,57 @@ func (r *Reader) ParseMessage(msg []string) {
 			msgType := strings.Trim(strings.Split(fields[0], "#")[0], "@")
 
 			switch msgType {
-			case TypePage:
-				message, err = parsePageHeader(fields)
 			case TypeAck:
-				message, err = parseAckHeader(fields)
+				message.Type = TypeAck
+				err = message.parseCommonFields(fields)
+				err = message.parseAckHeader(fields)
 
-			case TypeReload, TypeShutdown, TypeLogrotate, TypeIdle:
-				// Ignore these messages
+			case TypeEnaDis:
+				message.Type = TypeEnaDis
+				err = message.parseCommonFields(fields)
+				err = message.parseEnaDisHeader(fields)
+
+			case TypeData:
+				message.Type = TypeData
+				err = message.parseDataHeader(fields)
+
+			case TypeNotify:
+				message.Type = TypeNotify
+				err = message.parseCommonFields(fields)
+				err = message.parseNotifyHeader(fields)
+
+			case TypePage:
+				message.Type = TypePage
+				err = message.parseCommonFields(fields)
+				err = message.parsePageHeader(fields)
+
+			case TypeStaChg:
+				message.Type = TypeStaChg
+				err = message.parseStaChgHeader(fields)
+
+			case TypeStatus:
+				message.Type = TypeStatus
+				err = message.parseStatusHeader(fields)
+
+			case TypeNotes, TypeReload, TypeShutdown, TypeLogrotate, TypeIdle, TypeDropHost, TypeDropState:
+				message.Type = msgType
+				err = message.parseCommonFields(fields)
+
+			case TypeDropTest:
+				message.Type = TypeDropTest
+				err = message.parseCommonFields(fields)
+				err = message.parseDropTestHeader(fields)
+
+			case TypeRenameHost:
+				message.Type = TypeRenameHost
+				err = message.parseCommonFields(fields)
+				err = message.parseRenameHostHeader(fields)
+
+			case TypeRenameTest:
+				message.Type = TypeRenameTest
+				err = message.parseCommonFields(fields)
+				err = message.parseRenameTestHeader(fields)
+
 			default:
 				err = errors.New("Unknown message type. Raw header: " + line)
 			}
