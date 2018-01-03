@@ -75,7 +75,7 @@ This channel is fed information about tests where the color changes between an a
 | 5     | page path                  |
 
 ### Status channel
-This channel is fed the contents of all incoming "status" and "summary" messages.
+This channel is fed the contents of all incoming "status" messages.
 #### Header example
 #### Header fields
 
