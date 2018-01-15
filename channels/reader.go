@@ -1,4 +1,4 @@
-package channels
+package channels // import "github.com/dg-i/go-xymon/channels"
 
 import (
 	"bufio"
