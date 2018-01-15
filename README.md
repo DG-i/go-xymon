@@ -11,7 +11,7 @@ package main
 import (
 	"fmt"
 
-	"github.com/DG-i/go-xymon/channels"
+	"github.com/dg-i/go-xymon/channels"
 )
 
 type Handler struct{}
